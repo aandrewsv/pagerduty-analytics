@@ -11,6 +11,56 @@ A system for analyzing PagerDuty data with a focus on service incidents, team re
 - Comprehensive test suite
 - Dockerized project and tests
 
+## Required API Endpoints for PagerDuty take home excercise
+
+The number of existing Services
+
+- `GET /api/v1/services/count`
+
+Number of Incidents per Service
+
+- `GET /api/v1/services`
+
+Number of Incidents by Service and Status
+
+- `GET /api/v1/services`
+- `GET /api/v1/incidents/by-status`
+- `GET /api/v1/incidents/by-service`
+
+Number of Teams and their related Services
+
+- `GET /api/v1/teams/count`
+- `GET /api/v1/teams`
+
+Number of Escalation Policies and their Relationship with Teams and Services
+
+- `GET /api/v1/escalation-policies/count`
+- `GET /api/v1/escalation-policies`
+
+CSV report of each of the above points
+
+- `GET /api/v1/reports/services_count`
+- `GET /api/v1/reports/incidents_count_per_service`
+- `GET /api/v1/reports/incidents_status_count_by_service/:service_id`
+- `GET /api/v1/reports/services`
+- `GET /api/v1/reports/teams`
+- `GET /api/v1/reports/services_teams`
+- `GET /api/v1/reports/escalation_policies`
+- `GET /api/v1/reports/escalation_policies_teams`
+- `GET /api/v1/reports/escalation_policies_services`
+
+Analysis of which Service has more Incidents and breakdown of Incidents by status
+
+- `GET /api/v1/services/most-incidents`
+
+Graph reflecting the previous point
+
+- `GET /api/v1/services/chart`
+
+Analysis of inactive users in Schedules
+
+- `GET /api/v1/users/inactive`
+
 ## Architecture
 
 ### Components
@@ -54,7 +104,13 @@ docker compose -f docker/docker-compose.yml up --build
 - API Docs: <http://localhost:5000/api/docs>
 - Metabase: <http://localhost:3000>
 
-## API Endpoints
+5. Finally make a POST Request to the sync endpoint to start the data synchronization:
+
+```bash
+curl -X POST http://localhost:5000/api/v1/sync
+```
+
+## All API Endpoints
 
 ### Services
 
@@ -79,15 +135,24 @@ docker compose -f docker/docker-compose.yml up --build
 
 ### Escalation Policies
 
-TODO
+- `GET /api/v1/escalation-policies/count` - Total number of escalation policies
+- `GET /api/v1/escalation-policies` - List all escalation policies with teams and services
 
 ### Users
 
-TODO
+- `GET /api/v1/users/inactive` - List all inactive users in schedules
 
 ### Reports
 
-TODO
+- `GET /api/v1/reports/services_count` - Services count CSV report
+- `GET /api/v1/reports/incidents_count_per_service` - Incidents count per service CSV report
+- `GET /api/v1/reports/incidents_status_count_by_service/:service_id` - Incidents status count by service CSV report
+- `GET /api/v1/reports/services` - All services CSV report
+- `GET /api/v1/reports/teams` - All teams CSV report
+- `GET /api/v1/reports/services_teams` - All Services and Teams Relationships CSV report
+- `GET /api/v1/reports/escalation_policies` - All escalation policies CSV report
+- `GET /api/v1/reports/escalation_policies_teams` - All escalation policies and teams relationships CSV report
+- `GET /api/v1/reports/escalation_policies_services` - All escalation policies and services relationships CSV report
 
 ## Testing
 
@@ -97,15 +162,7 @@ Run tests (it will automatically build the image):
 docker compose -f .\docker\docker-compose.test.yml run --rm test pytest -v
 ```
 
-## Code Quality
-
-- Linting: `flake8 src/`
-- Type checking: `mypy src/`
-- Security: `bandit -r src/`
-
-## Metabase Dashboard
-
-TODO
+Note: run the project one time before running tests to ensure the database and its tables are properly created.
 
 ## Contributing
 
