@@ -43,6 +43,13 @@ schedule_escalation_policies = Table(
     Column("escalation_policy_id", String(32), ForeignKey("escalation_policies.id"), primary_key=True),
 )
 
+escalation_policy_teams = Table(
+    "escalation_policy_teams",
+    Base.metadata,
+    Column("escalation_policy_id", String(32), ForeignKey("escalation_policies.id")),
+    Column("team_id", String(32), ForeignKey("teams.id")),
+)
+
 
 class Service(Base):
     """
@@ -146,7 +153,6 @@ class Team(Base):
     services = relationship("Service", secondary=service_team, back_populates="teams")
     users = relationship("User", secondary=user_teams, back_populates="teams")
     schedules = relationship("Schedule", secondary=schedule_teams, back_populates="teams")
-    escalation_policies = relationship("EscalationPolicy", back_populates="team")
 
     @property
     def service_count(self) -> int:
@@ -224,11 +230,10 @@ class EscalationPolicy(Base):
     name = Column(String(255), nullable=False)
     description = Column(String(1024))
     num_loops = Column(Integer, default=0)
-    team_id = Column(String(32), ForeignKey("teams.id"))
 
     # Relationships
     rules = relationship("EscalationRule", cascade="all, delete-orphan")
-    team = relationship("Team", back_populates="escalation_policies")
+    teams = relationship("Team", secondary=escalation_policy_teams)
     services = relationship("Service", secondary=service_escalation_policy, back_populates="escalation_policies")
     schedules = relationship("Schedule", secondary=schedule_escalation_policies, back_populates="escalation_policies")
 

@@ -166,9 +166,13 @@ class DataSyncService:
                 policy.description = policy_data.get("description")
                 policy.num_loops = policy_data.get("num_loops", 0)
 
-                # Handle team relationship
+                # Handle teams relationship
                 if policy_data.get("teams"):
-                    policy.team_id = policy_data["teams"][0]["id"] if policy_data["teams"] else None
+                    policy.teams = [Team.query.get(team["id"]) for team in policy_data["teams"]]
+
+                # Handle services relationship
+                if policy_data.get("services"):
+                    policy.services = [Service.query.get(service["id"]) for service in policy_data["services"]]
 
                 db.session.add(policy)
 
