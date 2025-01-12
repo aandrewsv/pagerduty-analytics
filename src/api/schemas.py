@@ -8,19 +8,20 @@ class ServiceSchema(Schema):
     name = fields.Str(required=True, metadata={"description": "Service name"})
     status = fields.Str(required=True, validate=validate.OneOf(["active", "warning", "critical"]), metadata={"description": "Service status"})
     incident_count = fields.Int(metadata={"description": "Total number of incidents"})
-    last_incident_timestamp = fields.DateTime(format="iso",metadata={"description": "Timestamp of last incident"})
+    last_incident_timestamp = fields.DateTime(format="iso", metadata={"description": "Timestamp of last incident"})
 
     @pre_dump
     def process_timestamps(self, data, **kwargs):
         """Convert datetime strings to datetime objects if needed."""
         if isinstance(data, dict):
-            if data.get('last_incident_timestamp'):
-                if isinstance(data['last_incident_timestamp'], str):
+            if data.get("last_incident_timestamp"):
+                if isinstance(data["last_incident_timestamp"], str):
                     from datetime import datetime
+
                     try:
-                        data['last_incident_timestamp'] = datetime.fromisoformat(data['last_incident_timestamp'].replace('Z', '+00:00'))
+                        data["last_incident_timestamp"] = datetime.fromisoformat(data["last_incident_timestamp"].replace("Z", "+00:00"))
                     except ValueError:
-                        data['last_incident_timestamp'] = None
+                        data["last_incident_timestamp"] = None
         return data
 
 
@@ -33,8 +34,8 @@ class IncidentSchema(Schema):
     status = fields.Str(required=True, validate=validate.OneOf(["triggered", "acknowledged", "resolved"]), metadata={"description": "Incident status"})
     urgency = fields.Str(required=True, validate=validate.OneOf(["high", "low"]), metadata={"description": "Incident urgency"})
     service_id = fields.Str(required=True, metadata={"description": "Service unique identifier"})
-    created_at = fields.DateTime(required=True, format="iso",metadata={"description": "Incident creation timestamp"})
-    resolved_at = fields.DateTime(allow_none=True, format="iso",metadata={"description": "Incident resolution timestamp"})
+    created_at = fields.DateTime(required=True, format="iso", metadata={"description": "Incident creation timestamp"})
+    resolved_at = fields.DateTime(allow_none=True, format="iso", metadata={"description": "Incident resolution timestamp"})
 
 
 class TeamSchema(Schema):
@@ -44,6 +45,7 @@ class TeamSchema(Schema):
     name = fields.Str(required=True, metadata={"description": "Team name"})
     service_count = fields.Int(metadata={"description": "Number of services in the team"})
     services = fields.List(fields.Nested(ServiceSchema), metadata={"description": "List of services associated with the team"})
+
 
 class IncidentAnalysisSchema(Schema):
     """Schema for Incident Analysis response."""
@@ -104,36 +106,40 @@ class ServiceChartDataSchema(Schema):
 
 class IncidentsByServiceSchema(Schema):
     """Schema for incidents grouped by service."""
+
     service_id = fields.Str(required=True, metadata={"description": "Service identifier"})
     service_name = fields.Str(required=True, metadata={"description": "Service name"})
-    incidents = fields.List(
-        fields.Nested(IncidentSchema),
-        required=True,
-        metadata={"description": "List of incidents"}
-    )
+    incidents = fields.List(fields.Nested(IncidentSchema), required=True, metadata={"description": "List of incidents"})
+
 
 class IncidentStatusGroupSchema(Schema):
     """Schema for incidents grouped by status."""
+
     status = fields.Str(required=True, metadata={"description": "Incident status"})
     count = fields.Int(required=True, metadata={"description": "Number of incidents"})
-    incidents = fields.List(
-        fields.Nested(IncidentSchema),
-        required=True,
-        metadata={"description": "List of incidents"}
-    )
+    incidents = fields.List(fields.Nested(IncidentSchema), required=True, metadata={"description": "List of incidents"})
+
 
 class ServiceStatusGroupSchema(Schema):
     """Schema for incidents grouped by service and status."""
+
     service_name = fields.Str(required=True, metadata={"description": "Service name"})
     service_id = fields.Str(required=True, metadata={"description": "Service identifier"})
-    status_groups = fields.Dict(
-        keys=fields.Str(),
-        values=fields.Int(),
-        required=True,
-        metadata={"description": "Count of incidents by status"}
-    )
+    status_groups = fields.Dict(keys=fields.Str(), values=fields.Int(), required=True, metadata={"description": "Count of incidents by status"})
 
 
 class SimpleCountSchema(Schema):
     """Schema for simple count response."""
+
     count = fields.Int(required=True, metadata={"description": "Count"})
+
+
+class EscalationPolicySchema(Schema):
+    """Schema for Escalation Policy objects."""
+
+    id = fields.Str(required=True, metadata={"description": "Escalation Policy unique identifier"})
+    name = fields.Str(required=True, metadata={"description": "Escalation Policy name"})
+    description = fields.Str(required=True, metadata={"description": "Escalation Policy description"})
+    num_loops = fields.Int(required=True, metadata={"description": "Number of loops"})
+    teams = fields.List(fields.Nested(lambda: TeamBasicSchema()), required=True, metadata={"description": "List of teams associated with the escalation policy"})
+    services = fields.List(fields.Nested(lambda: ServiceSchema()), required=True, metadata={"description": "List of services associated with the escalation policy"})

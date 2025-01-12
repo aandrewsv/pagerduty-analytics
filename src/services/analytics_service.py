@@ -10,20 +10,21 @@ from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
+
 class AnalyticsService:
     def __init__(self, session: Session):
         self.session = session
 
     # Services Methods
-    
+
     def get_service_count(self) -> int:
         """Get the total number of services."""
         try:
-            return { "count": self.session.query(Service).count() }
+            return {"count": self.session.query(Service).count()}
         except Exception as e:
             logger.error(f"Error counting services: {str(e)}")
             raise
-    
+
     def get_services_with_incidents_and_status(self) -> List[Dict]:
         """Get a list of services with their incident counts and status."""
         try:
@@ -37,10 +38,7 @@ class AnalyticsService:
     def get_service_detail(self, service_id: str) -> Dict:
         """Get detailed information for a specific service."""
         try:
-            service = self.session.query(Service).options(
-                joinedload(Service.teams),
-                joinedload(Service.escalation_policies)
-            ).filter(Service.id == service_id).first()
+            service = self.session.query(Service).options(joinedload(Service.teams), joinedload(Service.escalation_policies)).filter(Service.id == service_id).first()
 
             if not service:
                 raise ValueError(f"Service with id {service_id} not found")
@@ -52,10 +50,7 @@ class AnalyticsService:
                 "incident_count": service.incident_count,
                 "last_incident_timestamp": service.last_incident_timestamp,
                 "teams": [{"id": team.id, "name": team.name} for team in service.teams],
-                "escalation_policies": [
-                    {"id": policy.id, "name": policy.name}
-                    for policy in service.escalation_policies
-                ],
+                "escalation_policies": [{"id": policy.id, "name": policy.name} for policy in service.escalation_policies],
             }
         except Exception as e:
             logger.error(f"Error getting service detail: {str(e)}")
@@ -66,15 +61,7 @@ class AnalyticsService:
         try:
             incidents = self.session.query(Incident).filter(Incident.service_id == service_id).order_by(Incident.created_at.desc()).all()
 
-            return [{
-                "id": incident.id,
-                "incident_number": incident.incident_number,
-                "title": incident.title,
-                "status": incident.status,
-                "urgency": incident.urgency,
-                "created_at": incident.created_at,
-                "resolved_at": incident.resolved_at
-            } for incident in incidents]
+            return [{"id": incident.id, "incident_number": incident.incident_number, "title": incident.title, "status": incident.status, "urgency": incident.urgency, "created_at": incident.created_at, "resolved_at": incident.resolved_at} for incident in incidents]
         except Exception as e:
             logger.error(f"Error getting service incidents: {str(e)}")
             raise
@@ -114,24 +101,13 @@ class AnalyticsService:
             raise
 
     # Incidents Methods
-    
+
     def get_all_incidents(self) -> List[Dict]:
         """Get all incidents with their details."""
         try:
-            incidents = self.session.query(Incident)\
-                .order_by(Incident.created_at.desc())\
-                .all()
-            
-            return [{
-                "id": incident.id,
-                "incident_number": incident.incident_number,
-                "title": incident.title,
-                "status": incident.status,
-                "urgency": incident.urgency,
-                "service_id": incident.service_id,
-                "created_at": incident.created_at,
-                "resolved_at": incident.resolved_at
-            } for incident in incidents]
+            incidents = self.session.query(Incident).order_by(Incident.created_at.desc()).all()
+
+            return [{"id": incident.id, "incident_number": incident.incident_number, "title": incident.title, "status": incident.status, "urgency": incident.urgency, "service_id": incident.service_id, "created_at": incident.created_at, "resolved_at": incident.resolved_at} for incident in incidents]
         except Exception as e:
             logger.error(f"Error getting all incidents: {str(e)}")
             raise
@@ -139,34 +115,14 @@ class AnalyticsService:
     def get_incidents_by_service(self) -> List[Dict]:
         """Get incidents grouped by service."""
         try:
-            results = self.session.query(
-                Service.id.label('service_id'),
-                Service.name.label('service_name'),
-                Incident
-            ).join(
-                Incident, Service.id == Incident.service_id
-            ).order_by(
-                Service.name, Incident.created_at.desc()
-            ).all()
+            results = self.session.query(Service.id.label("service_id"), Service.name.label("service_name"), Incident).join(Incident, Service.id == Incident.service_id).order_by(Service.name, Incident.created_at.desc()).all()
 
             # Group results by service
             services_dict = {}
             for service_id, service_name, incident in results:
                 if service_id not in services_dict:
-                    services_dict[service_id] = {
-                        'service_id': service_id,
-                        'service_name': service_name,
-                        'incidents': []
-                    }
-                services_dict[service_id]['incidents'].append({
-                    "id": incident.id,
-                    "incident_number": incident.incident_number,
-                    "title": incident.title,
-                    "status": incident.status,
-                    "urgency": incident.urgency,
-                    "created_at": incident.created_at,
-                    "resolved_at": incident.resolved_at
-                })
+                    services_dict[service_id] = {"service_id": service_id, "service_name": service_name, "incidents": []}
+                services_dict[service_id]["incidents"].append({"id": incident.id, "incident_number": incident.incident_number, "title": incident.title, "status": incident.status, "urgency": incident.urgency, "created_at": incident.created_at, "resolved_at": incident.resolved_at})
 
             return list(services_dict.values())
         except Exception as e:
@@ -176,37 +132,14 @@ class AnalyticsService:
     def get_incidents_by_status(self) -> List[Dict]:
         """Get incidents grouped by status."""
         try:
-            results = self.session.query(
-                Incident.status,
-                func.count(Incident.id).label('count')
-            ).group_by(
-                Incident.status
-            ).order_by(
-                Incident.status
-            ).all()
+            results = self.session.query(Incident.status, func.count(Incident.id).label("count")).group_by(Incident.status).order_by(Incident.status).all()
 
             # Get incidents for each status
             status_groups = []
             for status, count in results:
-                incidents = self.session.query(Incident).filter(
-                    Incident.status == status
-                ).order_by(
-                    Incident.created_at.desc()
-                ).all()
-                
-                status_groups.append({
-                    "status": status,
-                    "count": count,
-                    "incidents": [{
-                        "id": inc.id,
-                        "incident_number": inc.incident_number,
-                        "title": inc.title,
-                        "status": inc.status,
-                        "urgency": inc.urgency,
-                        "created_at": inc.created_at,
-                        "resolved_at": inc.resolved_at
-                    } for inc in incidents]
-                })
+                incidents = self.session.query(Incident).filter(Incident.status == status).order_by(Incident.created_at.desc()).all()
+
+                status_groups.append({"status": status, "count": count, "incidents": [{"id": inc.id, "incident_number": inc.incident_number, "title": inc.title, "status": inc.status, "urgency": inc.urgency, "created_at": inc.created_at, "resolved_at": inc.resolved_at} for inc in incidents]})
 
             return status_groups
         except Exception as e:
@@ -216,29 +149,20 @@ class AnalyticsService:
     def get_incidents_by_service_status(self) -> List[Dict]:
         """Get incidents grouped by service and status."""
         try:
-            results = self.session.query(
-                Service.id.label('service_id'),
-                Service.name.label('service_name'),
-                Incident.status,
-                func.count(Incident.id).label('count')
-            ).join(
-                Incident, Service.id == Incident.service_id
-            ).group_by(
-                Service.id, Service.name, Incident.status
-            ).order_by(
-                Service.name, Incident.status
-            ).all()
+            results = (
+                self.session.query(Service.id.label("service_id"), Service.name.label("service_name"), Incident.status, func.count(Incident.id).label("count"))
+                .join(Incident, Service.id == Incident.service_id)
+                .group_by(Service.id, Service.name, Incident.status)
+                .order_by(Service.name, Incident.status)
+                .all()
+            )
 
             # Transform results into the desired format
             services_dict = {}
             for service_id, service_name, status, count in results:
                 if service_id not in services_dict:
-                    services_dict[service_id] = {
-                        'service_id': service_id,
-                        'service_name': service_name,
-                        'status_groups': {}
-                    }
-                services_dict[service_id]['status_groups'][status] = count
+                    services_dict[service_id] = {"service_id": service_id, "service_name": service_name, "status_groups": {}}
+                services_dict[service_id]["status_groups"][status] = count
 
             return list(services_dict.values())
         except Exception as e:
@@ -249,7 +173,7 @@ class AnalyticsService:
     def get_team_count(self) -> int:
         """Get the total number of teams."""
         try:
-            return { "count": self.session.query(Team).count() }
+            return {"count": self.session.query(Team).count()}
         except Exception as e:
             logger.error(f"Error counting teams: {str(e)}")
             raise
@@ -263,7 +187,25 @@ class AnalyticsService:
         except Exception as e:
             logger.error(f"Error getting all teams: {str(e)}")
             raise
-    
+
     # Escalation Policies Methods
+    def get_escalation_policy_count(self) -> int:
+        """Get the total number of escalation policies."""
+        try:
+            return {"count": self.session.query(EscalationPolicy).count()}
+        except Exception as e:
+            logger.error(f"Error counting escalation policies: {str(e)}")
+            raise
+
+    def get_all_escalation_policies(self) -> List[Dict]:
+        """Get all escalation policies with their details."""
+        try:
+            policies = self.session.query(EscalationPolicy).options(joinedload(EscalationPolicy.teams), joinedload(EscalationPolicy.services)).all()
+
+            return [{"id": policy.id, "name": policy.name, "description": policy.description, "num_loops": policy.num_loops, "teams": [{"id": team.id, "name": team.name} for team in policy.teams], "services": [{"id": svc.id, "name": svc.name} for svc in policy.services]} for policy in policies]
+        except Exception as e:
+            logger.error(f"Error getting all escalation policies: {str(e)}")
+            raise
+
     # Users Methods
     # Reports Methods

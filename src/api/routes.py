@@ -1,7 +1,7 @@
 # /src/api/routes.py
 from flask import jsonify, send_file, current_app, request
 from flask.views import MethodView
-from src.api.schemas import SimpleCountSchema, ServiceSchema, IncidentSchema, TeamSchema, EscalationPolicyBasicSchema, ServiceIncidentBreakdownSchema, ServiceChartDataSchema, ServiceDetailSchema, IncidentsByServiceSchema, IncidentStatusGroupSchema, ServiceStatusGroupSchema
+from src.api.schemas import SimpleCountSchema, ServiceSchema, IncidentSchema, TeamSchema, EscalationPolicyBasicSchema, ServiceIncidentBreakdownSchema, ServiceChartDataSchema, ServiceDetailSchema, IncidentsByServiceSchema, IncidentStatusGroupSchema, ServiceStatusGroupSchema, EscalationPolicySchema
 from flask_smorest import Blueprint, abort
 from src.services.analytics_service import AnalyticsService
 from src.services.data_sync_service import DataSyncService
@@ -85,23 +85,25 @@ def sync_data():
         logger.error(f"Data sync failed: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+
 # Validation
 @blp.before_request
 def validate_service_id():
     """Validate service ID format if present in URL."""
-    if 'service_id' in request.view_args:
-        service_id = request.view_args['service_id']
+    if "service_id" in request.view_args:
+        service_id = request.view_args["service_id"]
         if not service_id:
             abort(400, message="Service ID is required")
+
 
 # API Endpoints
 
 # # ! REQUIRED:
-# ● The number of existing Services. [✅] - /services/count - 
+# ● The number of existing Services. [✅] - /services/count -
 # ● Number of Incidents per Service. - [✅] - /services - List all services with incident counts
 # ● Number of Incidents by Service and Status. [✅] - /services AND /incidents/by-status AND /incidents/by-service
 # ● Number of Teams and their related Services. [✅] - /teams/count AND /teams
-# ● Number of Escalation Policies and their Relationship with Teams and Services.
+# ● Number of Escalation Policies and their Relationship with Teams and Services. [✅] - /escalation-policies/count AND /escalation-policies
 # ● CSV report of each of the above points.
 # ● Analysis of which Service has more Incidents and breakdown of Incidents by status.
 # ● Graph reflecting the previous point.
@@ -115,6 +117,7 @@ def validate_service_id():
 # GET /api/v1/services/most-incidents   # Service with most incidents + breakdown
 # GET /api/v1/services/chart            # Graph data for service with most incidents
 
+
 # ! REQUIRED
 @blp.route("/services/count")
 class ServiceCount(MethodView):
@@ -123,6 +126,7 @@ class ServiceCount(MethodView):
         """Gets the exact number of services."""
         analytics = get_analytics_service()
         return analytics.get_service_count()
+
 
 # ! REQUIRED
 @blp.route("/services")
@@ -201,6 +205,7 @@ class ServiceIncidentChart(MethodView):
 # GET /api/v1/incidents/by-status       # Incidents grouped by status
 # GET /api/v1/incidents/by-service-status # Incidents grouped by service and status
 
+
 @blp.route("/incidents")
 class IncidentList(MethodView):
     @blp.response(200, IncidentSchema(many=True))
@@ -213,6 +218,7 @@ class IncidentList(MethodView):
         except Exception as e:
             logger.error(f"Error getting all incidents: {str(e)}")
             abort(500, message="Internal server error")
+
 
 # ! REQUIRED
 @blp.route("/incidents/by-service")
@@ -228,6 +234,7 @@ class IncidentsByService(MethodView):
             logger.error(f"Error getting incidents by service: {str(e)}")
             abort(500, message="Internal server error")
 
+
 # ! REQUIRED
 @blp.route("/incidents/by-status")
 class IncidentsByStatus(MethodView):
@@ -241,6 +248,7 @@ class IncidentsByStatus(MethodView):
         except Exception as e:
             logger.error(f"Error getting incidents by status: {str(e)}")
             abort(500, message="Internal server error")
+
 
 @blp.route("/incidents/by-service-status")
 class IncidentsByServiceStatus(MethodView):
@@ -256,15 +264,15 @@ class IncidentsByServiceStatus(MethodView):
             abort(500, message="Internal server error")
 
 
-
 # Teams
-# GET /api/v1/teams/count               # Total number of teams 
+# GET /api/v1/teams/count               # Total number of teams
 # GET /api/v1/teams                     # List all teams
 
 # TODO:
 # GET /api/v1/teams/{id}                # Get specific team details
 # GET /api/v1/teams/{id}/services       # Get services for a team
 # GET /api/v1/teams/service-summary     # Teams with their related services count
+
 
 # ! REQUIRED
 @blp.route("/teams/count")
@@ -274,6 +282,7 @@ class ServiceCount(MethodView):
         """Gets the exact number of services."""
         analytics = get_analytics_service()
         return analytics.get_team_count()
+
 
 # ! REQUIRED
 @blp.route("/teams")
@@ -289,10 +298,36 @@ class TeamList(MethodView):
             logger.error(f"Error getting all teams: {str(e)}")
             abort(500, message="Internal server error")
 
+
 # Escalation Policies
-# GET /api/v1/escalation-policies                # List all policies
-# GET /api/v1/escalation-policies/{id}           # Get specific policy
-# GET /api/v1/escalation-policies/relationships  # Get policies with team and service relationships
+# GET /api/v1/escalation-policies/count          # Total number of teams
+# GET /api/v1/escalation-policies                # List all policies with teams and services
+
+
+# ! REQUIRED
+@blp.route("/escalation-policies/count")
+class EscalationPolicyCount(MethodView):
+    @blp.response(200, SimpleCountSchema)
+    def get(self):
+        """Gets the exact number of escalation policies."""
+        analytics = get_analytics_service()
+        return analytics.get_escalation_policy_count()
+
+
+# ! REQUIRED
+@blp.route("/escalation-policies")
+class EscalationPolicyList(MethodView):
+    @blp.response(200, EscalationPolicySchema(many=True))
+    @blp.doc(description="Get all escalation policies")
+    def get(self):
+        """List all escalation policies."""
+        try:
+            analytics = get_analytics_service()
+            return analytics.get_all_escalation_policies()
+        except Exception as e:
+            logger.error(f"Error getting all escalation policies: {str(e)}")
+            abort(500, message="Internal server error")
+
 
 # Users
 # GET /api/v1/users/inactive           # Get inactive users in schedules
