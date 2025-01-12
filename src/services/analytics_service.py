@@ -3,7 +3,7 @@ from typing import Dict, List
 import pandas as pd
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
-from src.models.models import Service, Incident, Team, EscalationPolicy
+from src.models.models import Service, Incident, Team, EscalationPolicy, User, service_team, escalation_policy_teams, service_escalation_policy
 import logging
 import os
 from datetime import datetime, timedelta
@@ -169,6 +169,17 @@ class AnalyticsService:
             logger.error(f"Error getting incidents by service and status: {str(e)}")
             raise
 
+    # Accept a service id parameter and return list of status and each with count
+    def get_incidents_status_count_by_service(self, service_id: str) -> List[Dict]:
+        """Get incidents grouped by status."""
+        try:
+            results = self.session.query(Incident.status, func.count(Incident.id).label("count")).filter(Incident.service_id == service_id).group_by(Incident.status).all()
+
+            return [{"status": status, "count": count} for status, count in results]
+        except Exception as e:
+            logger.error(f"Error getting incidents by service and status: {str(e)}")
+            raise
+
     # Teams Methods
     def get_team_count(self) -> int:
         """Get the total number of teams."""
@@ -186,6 +197,16 @@ class AnalyticsService:
             return [{"id": team.id, "name": team.name, "services": [{"id": svc.id, "name": svc.name, "status": svc.status, "incident_count": svc.incident_count} for svc in team.services]} for team in teams]
         except Exception as e:
             logger.error(f"Error getting all teams: {str(e)}")
+            raise
+
+    def get_all_services_teams_relationships(self) -> List[Dict]:
+        """Get all services_teams relationships"""
+        # Get all records in the table "service_team" it only has the service_id and team_id
+        try:
+            results = self.session.query(service_team).all()
+            return results
+        except Exception as e:
+            logger.error(f"Error getting all services_teams relationships: {str(e)}")
             raise
 
     # Escalation Policies Methods
@@ -207,5 +228,33 @@ class AnalyticsService:
             logger.error(f"Error getting all escalation policies: {str(e)}")
             raise
 
+    def get_escalation_policies_teams_relationships(self) -> List[Dict]:
+        """Get all services_teams relationships"""
+        # Get all records in the table "service_team" it only has the service_id and team_id
+        try:
+            results = self.session.query(escalation_policy_teams).all()
+            return results
+        except Exception as e:
+            logger.error(f"Error getting all services_teams relationships: {str(e)}")
+            raise
+
+    def get_escalation_policies_services_relationships(self) -> List[Dict]:
+        """Get all services_teams relationships"""
+        # Get all records in the table "service_team" it only has the service_id and team_id
+        try:
+            results = self.session.query(service_escalation_policy).all()
+            return results
+        except Exception as e:
+            logger.error(f"Error getting all services_teams relationships: {str(e)}")
+            raise
+
     # Users Methods
-    # Reports Methods
+    def get_inactive_users(self) -> List[Dict]:
+        """Get inactive users in schedules."""
+        try:
+            results = self.session.query(User).filter(User.active == False).all()
+
+            return [{"id": user.id, "name": user.name, "email": user.email, "role": user.role, "active_schedules": [{"id": schedule.id, "name": schedule.name, "time_zone": schedule.time_zone} for schedule in user.active_schedules]} for user in results]
+        except Exception as e:
+            logger.error(f"Error getting inactive users: {str(e)}")
+            raise

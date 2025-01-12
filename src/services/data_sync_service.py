@@ -248,6 +248,30 @@ class DataSyncService:
         try:
             logger.debug(f"Received {len(schedules_data)} schedules to sync")
 
+            # Collect all unique new users first
+            all_user_ids = set()
+            new_users_data = {}
+            for schedule_data in schedules_data:
+                if "users" in schedule_data:
+                    for user in schedule_data["users"]:
+                        if not user.get("deleted_at"):
+                            all_user_ids.add(user["id"])
+                            new_users_data[user["id"]] = {"id": user["id"], "name": user["summary"]}
+
+            # Check which users already exist
+            existing_users = User.query.filter(User.id.in_(list(all_user_ids))).all()
+            existing_user_ids = {user.id for user in existing_users}
+            # Create only truly new users
+            new_users = []
+            for user_id in all_user_ids:
+                if user_id not in existing_user_ids:
+                    user_data = new_users_data[user_id]
+                    new_users.append(User(id=user_data["id"], name=user_data["name"], active=False))
+            if new_users:
+                db.session.add_all(new_users)
+                db.session.commit()
+
+            # Continue with schedule synchronization
             for schedule_data in schedules_data:
                 schedule = Schedule.query.get(schedule_data["id"])
                 if not schedule:
@@ -257,7 +281,7 @@ class DataSyncService:
                 schedule.name = schedule_data["name"]
                 schedule.time_zone = schedule_data.get("time_zone")
 
-                # Handle user relationships - skip deleted users
+                # Handle user relationships
                 if "users" in schedule_data:
                     user_ids = [user["id"] for user in schedule_data["users"] if not user.get("deleted_at")]
                     users = User.query.filter(User.id.in_(user_ids)).all()

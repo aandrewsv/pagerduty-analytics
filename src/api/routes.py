@@ -1,14 +1,36 @@
 # /src/api/routes.py
-from flask import jsonify, send_file, current_app, request
+from flask import jsonify, send_file, current_app, request, Response
 from flask.views import MethodView
-from src.api.schemas import SimpleCountSchema, ServiceSchema, IncidentSchema, TeamSchema, EscalationPolicyBasicSchema, ServiceIncidentBreakdownSchema, ServiceChartDataSchema, ServiceDetailSchema, IncidentsByServiceSchema, IncidentStatusGroupSchema, ServiceStatusGroupSchema, EscalationPolicySchema
+from src.api.schemas import (
+    SimpleCountSchema,
+    ServiceSchema,
+    IncidentSchema,
+    TeamSchema,
+    UserSchema,
+    ServiceIncidentBreakdownSchema,
+    ServiceChartDataSchema,
+    ServiceDetailSchema,
+    IncidentsByServiceSchema,
+    IncidentStatusGroupSchema,
+    ServiceStatusGroupSchema,
+    EscalationPolicySchema,
+    ServicesReportSchema,
+    IncidentsCountPerServiceReportSchema,
+    ReportsIncidentsStatusCountByService,
+    ReportsTeams,
+    ReportsServices,
+    ReportsServicesTeams,
+    ReportEscalationPolicies,
+    ReportEscalationPoliciesTeams,
+    ReportEscalationPoliciesServices,
+)
 from flask_smorest import Blueprint, abort
 from src.services.analytics_service import AnalyticsService
 from src.services.data_sync_service import DataSyncService
 from src.database import db
 from sqlalchemy import text
-from typing import Dict
-import pandas as pd
+import csv
+import io
 import logging
 import asyncio
 
@@ -86,29 +108,6 @@ def sync_data():
         return jsonify({"error": str(e)}), 500
 
 
-# Validation
-@blp.before_request
-def validate_service_id():
-    """Validate service ID format if present in URL."""
-    if "service_id" in request.view_args:
-        service_id = request.view_args["service_id"]
-        if not service_id:
-            abort(400, message="Service ID is required")
-
-
-# API Endpoints
-
-# # ! REQUIRED:
-# ● The number of existing Services. [✅] - /services/count -
-# ● Number of Incidents per Service. - [✅] - /services - List all services with incident counts
-# ● Number of Incidents by Service and Status. [✅] - /services AND /incidents/by-status AND /incidents/by-service
-# ● Number of Teams and their related Services. [✅] - /teams/count AND /teams
-# ● Number of Escalation Policies and their Relationship with Teams and Services. [✅] - /escalation-policies/count AND /escalation-policies
-# ● CSV report of each of the above points.
-# ● Analysis of which Service has more Incidents and breakdown of Incidents by status.
-# ● Graph reflecting the previous point.
-
-
 # Services
 # GET /api/v1/services/count            # Total number of services
 # GET /api/v1/services                  # List all services
@@ -118,7 +117,6 @@ def validate_service_id():
 # GET /api/v1/services/chart            # Graph data for service with most incidents
 
 
-# ! REQUIRED
 @blp.route("/services/count")
 class ServiceCount(MethodView):
     @blp.response(200, SimpleCountSchema)
@@ -128,7 +126,6 @@ class ServiceCount(MethodView):
         return analytics.get_service_count()
 
 
-# ! REQUIRED
 @blp.route("/services")
 class ServiceList(MethodView):
     @blp.response(200, ServiceSchema(many=True))
@@ -220,7 +217,6 @@ class IncidentList(MethodView):
             abort(500, message="Internal server error")
 
 
-# ! REQUIRED
 @blp.route("/incidents/by-service")
 class IncidentsByService(MethodView):
     @blp.response(200, IncidentsByServiceSchema(many=True))
@@ -235,7 +231,6 @@ class IncidentsByService(MethodView):
             abort(500, message="Internal server error")
 
 
-# ! REQUIRED
 @blp.route("/incidents/by-status")
 class IncidentsByStatus(MethodView):
     @blp.response(200, IncidentStatusGroupSchema(many=True))
@@ -268,13 +263,7 @@ class IncidentsByServiceStatus(MethodView):
 # GET /api/v1/teams/count               # Total number of teams
 # GET /api/v1/teams                     # List all teams
 
-# TODO:
-# GET /api/v1/teams/{id}                # Get specific team details
-# GET /api/v1/teams/{id}/services       # Get services for a team
-# GET /api/v1/teams/service-summary     # Teams with their related services count
 
-
-# ! REQUIRED
 @blp.route("/teams/count")
 class ServiceCount(MethodView):
     @blp.response(200, SimpleCountSchema)
@@ -284,7 +273,6 @@ class ServiceCount(MethodView):
         return analytics.get_team_count()
 
 
-# ! REQUIRED
 @blp.route("/teams")
 class TeamList(MethodView):
     @blp.response(200, TeamSchema(many=True))
@@ -300,11 +288,10 @@ class TeamList(MethodView):
 
 
 # Escalation Policies
-# GET /api/v1/escalation-policies/count          # Total number of teams
-# GET /api/v1/escalation-policies                # List all policies with teams and services
+# GET /api/v1/escalation-policies/count          # Total number of escalation policies
+# GET /api/v1/escalation-policies                # List all escalation policies with teams and services
 
 
-# ! REQUIRED
 @blp.route("/escalation-policies/count")
 class EscalationPolicyCount(MethodView):
     @blp.response(200, SimpleCountSchema)
@@ -314,7 +301,6 @@ class EscalationPolicyCount(MethodView):
         return analytics.get_escalation_policy_count()
 
 
-# ! REQUIRED
 @blp.route("/escalation-policies")
 class EscalationPolicyList(MethodView):
     @blp.response(200, EscalationPolicySchema(many=True))
@@ -332,9 +318,302 @@ class EscalationPolicyList(MethodView):
 # Users
 # GET /api/v1/users/inactive           # Get inactive users in schedules
 
-# Reports Endpoints (CSV exports)
-# GET /api/v1/reports/services         # Services report
-# GET /api/v1/reports/incidents        # Incidents report
-# GET /api/v1/reports/teams           # Teams report
-# GET /api/v1/reports/policies        # Escalation policies report
-# GET /api/v1/reports/inactive-users  # Inactive users report
+
+@blp.route("/users/inactive")
+class UserInactive(MethodView):
+    @blp.response(200, UserSchema(many=True))
+    @blp.doc(description="Get inactive users in schedules")
+    def get(self):
+        """Get inactive users in schedules."""
+        try:
+            analytics = get_analytics_service()
+            return analytics.get_inactive_users()
+        except Exception as e:
+            logger.error(f"Error getting inactive users: {str(e)}")
+            abort(500, message="Internal server error")
+
+
+# Reports Endpoints (CSV exports) ALL REQUIRED
+# GET /api/v1/reports/services_count
+# GET /api/v1/reports/incidents_count_per_service
+# GET /api/v1/reports/incidents_status_count_by_service/:service_id
+# GET /api/v1/reports/teams
+# GET /api/v1/reports/services
+# GET /api/v1/reports/services_teams
+# GET /api/v1/reports/escalation_policies
+# GET /api/v1/reports/escalation_policies_teams
+# GET /api/v1/reports/escalation_policies_services
+
+
+@blp.route("/reports/services_count")
+class ReportsServices(MethodView):
+    @blp.response(200, ServicesReportSchema)
+    @blp.doc(description="Services report")
+    def get(self):
+        """Services count CSV report."""
+        try:
+            # Get services count
+            analytics = get_analytics_service()
+            count = analytics.get_service_count()["count"]
+
+            # Creates CSV file
+            output = io.StringIO()
+            writer = csv.writer(output)
+            writer.writerow(["Service Count"])
+            writer.writerow([count])
+
+            # Send CSV file as response
+            return Response(
+                output.getvalue(),
+                mimetype="text/csv",
+                headers={
+                    "Content-Disposition": "attachment; filename=services_count.csv",
+                },
+            )
+        except Exception as e:
+            logger.error(f"Error getting services report: {str(e)}")
+            abort(500, message="Internal server error")
+
+
+@blp.route("/reports/incidents_count_per_service")
+class ReportsIncidentsCountPerService(MethodView):
+    @blp.response(200, IncidentsCountPerServiceReportSchema)
+    @blp.doc(description="Incidents count per service CSV report")
+    def get(self):
+        """Incidents count per service CSV report."""
+        try:
+            # Get services count
+            analytics = get_analytics_service()
+            data = analytics.get_incidents_by_service()
+
+            # Creates CSV file
+            output = io.StringIO()
+            writer = csv.writer(output)
+            writer.writerow(["Service", "Incidents"])
+            for row in data:
+                writer.writerow([row["service_name"], len(row["incidents"])])
+
+            # Send CSV file as response
+            return Response(
+                output.getvalue(),
+                mimetype="text/csv",
+                headers={
+                    "Content-Disposition": "attachment; filename=incidents_count_per_service.csv",
+                },
+            )
+        except Exception as e:
+            logger.error(f"Error getting incidents count per service report: {str(e)}")
+            abort(500, message="Internal server error")
+
+
+@blp.route("/reports/incidents_status_count_by_service/<string:service_id>")
+class ReportsIncidentsStatusCountByService(MethodView):
+    @blp.response(200, ReportsIncidentsStatusCountByService)
+    @blp.doc(description="Incidents status count by service CSV report")
+    def get(self, service_id):
+        """Incidents status count by service CSV report."""
+        try:
+            # Get services count
+            analytics = get_analytics_service()
+            data = analytics.get_incidents_status_count_by_service(service_id)
+
+            # Creates CSV file
+            output = io.StringIO()
+            writer = csv.writer(output)
+            writer.writerow(["Status", "Incident Count"])
+            for row in data:
+                writer.writerow([row["status"], row["count"]])
+
+            # Send CSV file as response
+            return Response(
+                output.getvalue(),
+                mimetype="text/csv",
+                headers={
+                    "Content-Disposition": "attachment; filename=incidents_count_per_service.csv",
+                },
+            )
+        except Exception as e:
+            logger.error(f"Error getting incidents status count by service report: {str(e)}")
+            abort(500, message="Internal server error")
+
+
+@blp.route("/reports/teams")
+class ReportsTeams(MethodView):
+    @blp.response(200, ReportsTeams)
+    @blp.doc(description="All teams CSV report")
+    def get(self):
+        """All teams CSV report"""
+        try:
+            # Get all teams
+            analytics = get_analytics_service()
+            data = analytics.get_all_teams()
+
+            # Creates CSV file
+            output = io.StringIO()
+            writer = csv.writer(output)
+            writer.writerow(["Team ID", "Team Name"])
+            for row in data:
+                writer.writerow([row["id"], row["name"]])
+
+            # Send CSV file as response
+            return Response(
+                output.getvalue(),
+                mimetype="text/csv",
+                headers={
+                    "Content-Disposition": "attachment; filename=incidents_count_per_service.csv",
+                },
+            )
+        except Exception as e:
+            logger.error(f"Error getting teams report: {str(e)}")
+            abort(500, message="Internal server error")
+
+
+@blp.route("/reports/services")
+class ReportsServices(MethodView):
+    @blp.response(200, ReportsServices)
+    @blp.doc(description="All services CSV report")
+    def get(self):
+        """All services CSV report"""
+        try:
+            # Get all services
+            analytics = get_analytics_service()
+            data = analytics.get_services_with_incidents_and_status()
+
+            # Creates CSV file
+            output = io.StringIO()
+            writer = csv.writer(output)
+            writer.writerow(["Service ID", "Service Name"])
+            for row in data:
+                writer.writerow([row["id"], row["name"]])
+
+            # Send CSV file as response
+            return Response(
+                output.getvalue(),
+                mimetype="text/csv",
+                headers={
+                    "Content-Disposition": "attachment; filename=incidents_count_per_service.csv",
+                },
+            )
+        except Exception as e:
+            logger.error(f"Error getting services report: {str(e)}")
+            abort(500, message="Internal server error")
+
+
+@blp.route("/reports/services_teams")
+class ReportsServicesTeams(MethodView):
+    @blp.response(200, ReportsServicesTeams)
+    @blp.doc(description="All services CSV report")
+    def get(self):
+        """All services CSV report"""
+        try:
+            # Get all services
+            analytics = get_analytics_service()
+            data = analytics.get_all_services_teams_relationships()
+
+            # Creates CSV file
+            output = io.StringIO()
+            writer = csv.writer(output)
+            writer.writerow(["Service ID", "Team Name"])
+            for row in data:
+                writer.writerow([row.service_id, row.team_id])
+            # Send CSV file as response
+            return Response(
+                output.getvalue(),
+                mimetype="text/csv",
+                headers={
+                    "Content-Disposition": "attachment; filename=incidents_count_per_service.csv",
+                },
+            )
+        except Exception as e:
+            logger.error(f"Error getting services and teams report: {str(e)}")
+            abort(500, message="Internal server error")
+
+
+@blp.route("/reports/escalation_policies")
+class ReportEscalationPolicies(MethodView):
+    @blp.response(200, ReportEscalationPolicies)
+    @blp.doc(description="All escalation policies CSV report")
+    def get(self):
+        """All escalation policies CSV report"""
+        try:
+            # Get all escalation policies
+            analytics = get_analytics_service()
+            data = analytics.get_all_escalation_policies()
+
+            # Creates CSV file
+            output = io.StringIO()
+            writer = csv.writer(output)
+            writer.writerow(["Escalation Policy ID", "Escalation Policy Name"])
+            for row in data:
+                writer.writerow([row["id"], row["name"]])
+            # Send CSV file as response
+            return Response(
+                output.getvalue(),
+                mimetype="text/csv",
+                headers={
+                    "Content-Disposition": "attachment; filename=incidents_count_per_service.csv",
+                },
+            )
+        except Exception as e:
+            logger.error(f"Error getting escalation policies report: {str(e)}")
+            abort(500, message="Internal server error")
+
+
+@blp.route("/reports/escalation_policies_teams")
+class ReportEscalationPoliciesTeams(MethodView):
+    @blp.response(200, ReportEscalationPoliciesTeams)
+    @blp.doc(description="All escalation policies and teams relationships CSV report")
+    def get(self):
+        """All escalation policies and teams relationships CSV report"""
+        try:
+            # Get all escalation policies
+            analytics = get_analytics_service()
+            data = analytics.get_escalation_policies_teams_relationships()
+
+            # Creates CSV file
+            output = io.StringIO()
+            writer = csv.writer(output)
+            writer.writerow(["Escalation Policy ID", "Team ID"])
+            for row in data:
+                writer.writerow([row.escalation_policy_id, row.team_id])
+            # Send CSV file as response
+            return Response(
+                output.getvalue(),
+                mimetype="text/csv",
+                headers={
+                    "Content-Disposition": "attachment; filename=incidents_count_per_service.csv",
+                },
+            )
+        except Exception as e:
+            logger.error(f"Error getting escalation policies and teams report: {str(e)}")
+            abort(500, message="Internal server error")
+
+
+@blp.route("/reports/escalation_policies_services")
+class ReportEscalationPoliciesServices(MethodView):
+    @blp.response(200, ReportEscalationPoliciesServices)
+    @blp.doc(description="All escalation policies and services relationships CSV report")
+    def get(self):
+        """All escalation policies and services relationships CSV report"""
+        try:
+            # Get all escalation policies
+            analytics = get_analytics_service()
+            data = analytics.get_escalation_policies_services_relationships()
+
+            # Creates CSV file
+            output = io.StringIO()
+            writer = csv.writer(output)
+            writer.writerow(["Escalation Policy ID", "Service ID"])
+            for row in data:
+                writer.writerow([row.escalation_policy_id, row.service_id])
+            # Send CSV file as response
+            return Response(
+                output.getvalue(),
+                mimetype="text/csv",
+                headers={
+                    "Content-Disposition": "attachment; filename=incidents_count_per_service.csv",
+                },
+            )
+        except Exception as e:
+            logger.error(f"Error getting escalation policies and services report: {str(e)}")
+            abort(500, message="Internal server error")

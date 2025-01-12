@@ -1,5 +1,5 @@
 # src/models/models.py
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Table, func
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Table, func, Boolean
 from sqlalchemy.orm import relationship
 from src.database import db
 
@@ -302,6 +302,7 @@ class User(Base):
     name = Column(String(255), nullable=False)
     email = Column(String(255), unique=True)
     role = Column(String(50))  # owner, admin, user, limited_user, read_only_user, etc.
+    active = Column(Boolean, default=True)
 
     # Relationships
     teams = relationship("Team", secondary=user_teams, back_populates="users", lazy="joined")

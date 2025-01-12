@@ -143,3 +143,69 @@ class EscalationPolicySchema(Schema):
     num_loops = fields.Int(required=True, metadata={"description": "Number of loops"})
     teams = fields.List(fields.Nested(lambda: TeamBasicSchema()), required=True, metadata={"description": "List of teams associated with the escalation policy"})
     services = fields.List(fields.Nested(lambda: ServiceSchema()), required=True, metadata={"description": "List of services associated with the escalation policy"})
+
+
+class ScheduleSchema(Schema):
+    """Schema for Schedule objects."""
+
+    id = fields.Str(required=True, metadata={"description": "Schedule unique identifier"})
+    name = fields.Str(required=True, metadata={"description": "Schedule name"})
+    time_zone = fields.Str(required=True, metadata={"description": "Time zone"})
+    users = fields.List(fields.Nested(lambda: UserSchema()), required=True, metadata={"description": "List of users associated with the schedule"})
+    teams = fields.List(fields.Nested(lambda: TeamBasicSchema()), required=True, metadata={"description": "List of teams associated with the schedule"})
+
+
+class UserSchema(Schema):
+    """Schema for User objects."""
+
+    id = fields.Str(required=True, metadata={"description": "User unique identifier"})
+    name = fields.Str(required=True, metadata={"description": "User name"})
+    email = fields.Str(required=True, metadata={"description": "User email"})
+    role = fields.Str(required=True, metadata={"description": "User role"})
+    active = fields.Bool(required=True, metadata={"description": "User active status"})
+    active_schedules = fields.List(fields.Nested(lambda: ScheduleSchema()), required=True, metadata={"description": "List of active schedules for the user"})
+
+
+class ServicesReportSchema(Schema):
+    class Meta:
+        description = "Services count report CSV file"
+
+
+class IncidentsCountPerServiceReportSchema(Schema):
+    class Meta:
+        description = "Incidents count per service CSV report"
+
+
+class ReportsIncidentsStatusCountByService(Schema):
+    class Meta:
+        description = "Incidents status count by service CSV report"
+
+
+class ReportsTeams(Schema):
+    class Meta:
+        description = "All teams CSV report"
+
+
+class ReportsServices(Schema):
+    class Meta:
+        description = "All Services CSV report"
+
+
+class ReportsServicesTeams(Schema):
+    class Meta:
+        description = "All Services and Teams Relationships CSV report"
+
+
+class ReportEscalationPolicies(Schema):
+    class Meta:
+        description = "All Escalation Policies CSV report"
+
+
+class ReportEscalationPoliciesTeams(Schema):
+    class Meta:
+        description = "All Escalation Policies and Teams Relationships CSV report"
+
+
+class ReportEscalationPoliciesServices(Schema):
+    class Meta:
+        description = "All Escalation Policies and Services Relationships CSV report"
