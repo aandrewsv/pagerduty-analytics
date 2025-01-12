@@ -7,7 +7,6 @@ A system for analyzing PagerDuty data with a focus on service incidents, team re
 - Data synchronization with PagerDuty API
 - MySQL database for data persistence and analysis
 - RESTful API with OpenAPI documentation
-- Metabase integration for data visualization
 - Comprehensive test suite
 - Dockerized project and tests
 
@@ -68,7 +67,6 @@ Analysis of inactive users in Schedules
 - Flask REST API
 - MySQL Database
 - Analytics Service
-- Metabase Dashboard
 - PagerDuty API Client
 
 ### Design Patterns
@@ -102,7 +100,6 @@ docker compose -f docker/docker-compose.yml up --build
 
 - API: <http://localhost:5000/api>
 - API Docs: <http://localhost:5000/api/docs>
-- Metabase: <http://localhost:3000>
 
 5. Finally make a POST Request to the sync endpoint to start the data synchronization:
 
