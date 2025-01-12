@@ -1,0 +1,33 @@
+services:
+  test:
+    build: 
+      context: ..
+      dockerfile: docker/Dockerfile.test
+    environment:
+      - FLASK_ENV=testing
+      - "DATABASE_URL=sqlite:///memory:"
+      - PAGERDUTY_API_KEY=test-api-key
+    volumes:
+      - ..:/app
+
+  test-with-coverage:
+    build: 
+      context: ..
+      dockerfile: docker/Dockerfile.test
+    environment:
+      - FLASK_ENV=testing
+      - "DATABASE_URL=sqlite:///memory:"
+      - PAGERDUTY_API_KEY=test-api-key
+    volumes:
+      - ..:/app
+      - test-results:/app/test-results
+    command: >
+      pytest tests/
+      -v
+      --cov=src
+      --cov-report=html:/app/test-results/coverage
+      --cov-report=term-missing
+      --junitxml=/app/test-results/junit.xml
+
+volumes:
+  test-results:

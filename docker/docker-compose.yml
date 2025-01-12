@@ -1,0 +1,45 @@
+services:
+  web:
+    build: 
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_APP=main.py
+      - FLASK_ENV=development
+      - DATABASE_URL=mysql+pymysql://user:password@db/pagerduty_analytics
+      - PAGERDUTY_API_KEY=${PAGERDUTY_API_KEY}
+    volumes:
+      - ..:/app
+    depends_on:
+      db:
+        condition: service_healthy
+
+    env_file:
+      - ../.env
+
+  db:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpassword
+      - MYSQL_DATABASE=pagerduty_analytics
+      - MYSQL_USER=user
+      - MYSQL_PASSWORD=password
+      - MYSQL_AUTH_PLUGIN=caching_sha2_password
+    command: --default-authentication-plugin=caching_sha2_password
+    volumes:
+      - mysql_data:/var/lib/mysql
+    env_file:
+      - ../.env
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u$$MYSQL_USER", "-p$$MYSQL_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  mysql_data:
+  test-results:

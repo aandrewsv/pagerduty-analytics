@@ -1,0 +1,32 @@
+graph TD
+    subgraph External
+        PD[PagerDuty API]
+    end
+
+    subgraph Flask Application
+        API[API Routes]
+        DS[DataSyncService]
+        AS[AnalyticsService]
+        PDC[PagerDutyClient]
+        
+        subgraph Models
+            M1[Service]
+            M2[Incident]
+            M3[Team]
+            M4[EscalationPolicy]
+            M5[Schedule]
+            M6[User]
+        end
+    end
+
+    subgraph Database
+        DB[(MySQL)]
+    end
+
+    PD --> PDC
+    PDC --> DS
+    DS --> Models
+    Models --> DB
+    API --> AS
+    AS --> DB
+    API --> DS
