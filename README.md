@@ -71,9 +71,9 @@ Analysis of inactive users in Schedules
 
 ### Design Patterns
 
-- Repository Pattern (Data access)
-- Observer Pattern (Data sync)
-- Service Layer Pattern (Business logic)
+- Repository Pattern (SQLAlchemy models)
+- Concepts from Observer Pattern for data sync with PagerDuty API
+- Service Layer Pattern for separation of concerns
 
 ## Setup
 
