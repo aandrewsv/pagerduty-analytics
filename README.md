@@ -71,9 +71,12 @@ Analysis of inactive users in Schedules
 
 ### Design Patterns
 
+Code sctructure and data handling follows some principles of the following design patterns:
+
 - Repository Pattern (SQLAlchemy models)
-- Concepts from Observer Pattern for data sync with PagerDuty API
+- Observer Pattern or Synchronization Pattern for data sync with PagerDuty API
 - Service Layer Pattern for separation of concerns
+- Dependency Injection (db session injection in services)
 
 ## Setup
 
