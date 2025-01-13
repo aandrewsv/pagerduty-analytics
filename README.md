@@ -42,7 +42,7 @@ docker compose -f docker/docker-compose.yml --env-file .env up --build
 curl -X POST http://localhost:5000/api/v1/sync
 ```
 
-6. Test the endpoints listed below
+6. Test the endpoints listed below for the test
 
 ## Steps to compeletely delete the project
 
