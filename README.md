@@ -10,6 +10,38 @@ A system for analyzing PagerDuty data with a focus on service incidents, team re
 - Comprehensive test suite
 - Dockerized project and tests
 
+## Setup
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/aandrewsv/pagerduty-analytics.git
+```
+
+2. Create .env file:
+
+```bash
+cp .env.example .env
+# Edit .env with your PagerDuty API key
+```
+
+3. Start services:
+
+```bash
+docker compose -f docker/docker-compose.yml up --build
+```
+
+4. Access:
+
+- API: <http://localhost:5000/api>
+- API Docs: <http://localhost:5000/api/docs>
+
+5. Finally make a POST Request to the sync endpoint to start the data synchronization:
+
+```bash
+curl -X POST http://localhost:5000/api/v1/sync
+```
+
 ## Required API Endpoints for PagerDuty take home excercise
 
 The number of existing Services
@@ -77,38 +109,6 @@ Code sctructure and data handling follows some principles of the following desig
 - Observer Pattern or Synchronization Pattern for data sync with PagerDuty API
 - Service Layer Pattern for separation of concerns
 - Dependency Injection (db session injection in services)
-
-## Setup
-
-1. Clone the repository:
-
-```bash
-git clone https://github.com/aandrewsv/pagerduty-analytics.git
-```
-
-2. Create .env file:
-
-```bash
-cp .env.example .env
-# Edit .env with your PagerDuty API key
-```
-
-3. Start services:
-
-```bash
-docker compose -f docker/docker-compose.yml up --build
-```
-
-4. Access:
-
-- API: <http://localhost:5000/api>
-- API Docs: <http://localhost:5000/api/docs>
-
-5. Finally make a POST Request to the sync endpoint to start the data synchronization:
-
-```bash
-curl -X POST http://localhost:5000/api/v1/sync
-```
 
 ## All API Endpoints
 
