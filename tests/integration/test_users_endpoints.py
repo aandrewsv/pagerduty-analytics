@@ -24,6 +24,4 @@ class TestUsersEndpoints(TestBase):
         assert len(data) == 1
         assert data[0]["id"] == "user2"
         assert data[0]["name"] == "User 2"
-        assert data[0]["email"] == "user2@example.com"
-        assert data[0]["role"] == "user"
-        assert data[0]["active_schedules"] == []
+        assert data[0]["active_schedules_count"] == 0

@@ -254,7 +254,7 @@ class AnalyticsService:
         try:
             results = self.session.query(User).filter(User.active == False).all()
 
-            return [{"id": user.id, "name": user.name, "email": user.email, "role": user.role, "active_schedules": [{"id": schedule.id, "name": schedule.name, "time_zone": schedule.time_zone} for schedule in user.active_schedules]} for user in results]
+            return [{"id": user.id, "name": user.name, "email": user.email, "role": user.role, "active_schedules_count": user.active_schedules_count} for user in results]
         except Exception as e:
             logger.error(f"Error getting inactive users: {str(e)}")
             raise

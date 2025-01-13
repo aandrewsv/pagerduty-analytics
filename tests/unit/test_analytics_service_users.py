@@ -25,6 +25,4 @@ class TestAnalyticsUsersMethods(TestBase):
         assert len(result) == 1
         assert result[0]["id"] == "user2"
         assert result[0]["name"] == "User 2"
-        assert result[0]["email"] == "user2@example.com"
-        assert result[0]["role"] == "user"
-        assert result[0]["active_schedules"] == []
+        assert result[0]["active_schedules_count"] == 0

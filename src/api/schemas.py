@@ -163,7 +163,7 @@ class UserSchema(Schema):
     email = fields.Str(required=True, metadata={"description": "User email"})
     role = fields.Str(required=True, metadata={"description": "User role"})
     active = fields.Bool(required=True, metadata={"description": "User active status"})
-    active_schedules = fields.List(fields.Nested(lambda: ScheduleSchema()), required=True, metadata={"description": "List of active schedules for the user"})
+    active_schedules_count = fields.Int(required=True, metadata={"description": "Number of active schedules for the user"})
 
 
 class ServicesReportSchema(Schema):
