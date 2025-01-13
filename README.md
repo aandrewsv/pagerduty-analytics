@@ -28,7 +28,7 @@ cp .env.example .env
 3. Start services:
 
 ```bash
-docker compose -f docker/docker-compose.yml up --build
+docker compose -f docker/docker-compose.yml --env-file .env up --build
 ```
 
 4. Access:
@@ -40,6 +40,28 @@ docker compose -f docker/docker-compose.yml up --build
 
 ```bash
 curl -X POST http://localhost:5000/api/v1/sync
+```
+
+6. Test the endpoints listed below
+
+## Steps to compeletely delete the project
+
+1. To remove related containers and delete db:
+
+```bash
+docker compose -f docker/docker-compose.yml down -v
+```
+
+2. Check the image created for the project:
+
+```bash
+docker images
+```
+
+3. Should be called 'docker-web' delete it with:
+
+```bash
+docker rmi docker-web
 ```
 
 ## Required API Endpoints for PagerDuty take home excercise
